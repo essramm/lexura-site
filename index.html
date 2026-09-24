@@ -434,7 +434,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
         <summary>Rather just fill in a form</summary>
         <div class="bk-fields">
           <label class="full">Your name<input id="bk_name" type="text" autocomplete="name"></label>
-          <label>Mobile number<input id="bk_phone" type="tel" autocomplete="tel" placeholder="(925) 555 0134"></label>
+          <label>Mobile number or email<input id="bk_phone" type="text" autocomplete="tel" placeholder="(925) 555 0134 or you@example.com"></label>
           <label>Year<input id="bk_year" type="text" inputmode="numeric" placeholder="2014"></label>
           <label>Make<select id="bk_make"><option value="">Choose</option><option>Lexus</option><option>Acura</option><option>Toyota</option><option>Honda</option></select></label>
           <label>Model<select id="bk_model" disabled><option value="">Pick a make first</option></select></label>
@@ -720,6 +720,12 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
     if(d.length!==10) return null;
     return "("+d.slice(0,3)+") "+d.slice(3,6)+" "+d.slice(6);
   }
+  /* a number or an email, whichever the customer would rather be reached on */
+  function parseContact(raw){
+    var e=raw.match(/[^\s<>()\[\],;:]+@[^\s<>()\[\],;:]+\.[A-Za-z]{2,}/);
+    if(e) return e[0];
+    return parsePhone(raw);
+  }
 
   /* ---------- the script ---------- */
   var STEPS=[
@@ -773,13 +779,13 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
         var n=raw.trim().replace(/^(my name is|it's|its|im|i'm)\s+/i,"");
         if(!n || n.length>60) return null;
         st.name=n;
-        return "Thanks "+n.split(/\s+/)[0]+". Last thing, a mobile number for Alan to call you back on?";
+        return "Thanks "+n.split(/\s+/)[0]+". Last thing, a mobile number or an email so Alan can get back to you?";
       }},
     { key:"phone",
-      ask:"A mobile number for Alan to call you back on?",
-      retry:"I need all ten digits so Alan can reach you.",
+      ask:"A mobile number or an email so Alan can get back to you?",
+      retry:"A ten digit number or an email address, whichever suits you.",
       take:function(t,raw){
-        var p=parsePhone(raw); if(!p) return null;
+        var p=parseContact(raw); if(!p) return null;
         st.phone=p; done=true;
         var car=[st.year,st.make,st.model].filter(Boolean).join(" ");
         var mi=(st.mileage && st.mileage!=="Not given") ? " on "+st.mileage : "";
@@ -847,7 +853,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       ["Reason for visit",clean(data.reason)||"Not given"],
       ["Drop off day",clean(data.preferred_day)||"Any weekday morning"],
       ["Name",clean(data.name)||"Not given"],
-      ["Mobile",clean(data.phone)||"Not given"]
+      ["Phone or email",clean(data.phone)||"Not given"]
     ];
     if(clean(data.notes)) rows.push(["Notes",clean(data.notes)]);
 
