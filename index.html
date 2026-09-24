@@ -417,7 +417,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
 
         <div class="bk-in">
           <label for="bkSay" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Your message</label>
-          <textarea id="bkSay" rows="1" placeholder="2014 Lexus RX350, 118k miles, grinding when I brake"></textarea>
+          <textarea id="bkSay" rows="1" placeholder="Tell me what the car is doing"></textarea>
           <button class="bk-btn p" id="bkSend" type="button">Send</button>
         </div>
 
@@ -1002,9 +1002,9 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       reason:g("bk_why"),preferred_day:g("bk_day"),name:g("bk_name"),phone:g("bk_phone")});
   });
 
-  var GREETING="Hi, this is Alan the virtual agent. What is the reason for your visit?";
-  var CHIPS=["2014 Lexus RX350, brakes are grinding","2011 Honda Accord, check engine light",
-             "2016 Toyota Camry, due for the 90k service","Second opinion on a dealer quote"];
+  var GREETING="Hi, this is Alan's service agent. What is the reason for your visit?";
+  var CHIPS=["Brakes are grinding","Check engine light is on",
+             "Due for a scheduled service","Second opinion on a dealer quote"];
 
   function renderChips(){
     chipsEl.innerHTML="";
