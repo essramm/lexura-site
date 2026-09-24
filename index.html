@@ -389,7 +389,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
         </div>
 
         <div class="bk-foot">
-          <span class="grow" id="bkStatus">Connecting the desk</span>
+          <span class="grow" id="bkStatus">Your request goes to Alan. He calls you back to confirm.</span>
           <button class="bk-btn" id="bkStop" type="button" hidden>Stop</button>
           <button class="bk-btn p" id="bkSlip" type="button" disabled>Write up my request</button>
         </div>
@@ -585,11 +585,10 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
 
 
 <script>
-/* Service desk, local demo build.
-   Scripted intake. No model, no network, no API key. Runs from file:// or any
-   static server. Walks the same questions and produces the same request slip as
-   the published site, so the flow demos identically. The published build uses
-   claude.use("sample") instead of this. */
+/* Service desk, production build for lexuraservice.com.
+   Scripted intake: no model, no API key, nothing to rate limit or bill. Walks
+   the caller through the same questions a service advisor would, writes up a
+   drop off request and emails it to the shop through Web3Forms. */
 (function(){
   "use strict";
   var TEL="+19258288890", TELD="(925) 828-8890";
@@ -937,7 +936,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
   resetBtn.addEventListener("click",reset);
 
   reset();
-  statusEl.textContent="Demo build. Scripted intake, runs offline.";
+  statusEl.textContent="Your request goes to Alan. He calls you back to confirm.";
 })();
 </script>
 
