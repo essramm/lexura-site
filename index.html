@@ -432,7 +432,8 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
           <label>Mobile number<input id="bk_phone" type="tel" autocomplete="tel" placeholder="(925) 555 0134"></label>
           <label>Year<input id="bk_year" type="text" inputmode="numeric" placeholder="2014"></label>
           <label>Make<select id="bk_make"><option value="">Choose</option><option>Lexus</option><option>Acura</option><option>Toyota</option><option>Honda</option></select></label>
-          <label>Model<input id="bk_model" type="text" placeholder="RX350"></label>
+          <label>Model<select id="bk_model" disabled><option value="">Pick a make first</option></select></label>
+          <label class="full" id="bk_model_other_wrap" hidden>Model, not listed<input id="bk_model_other" type="text" placeholder="Type the model"></label>
           <label>Approximate mileage<input id="bk_miles" type="text" inputmode="numeric" placeholder="118,000"></label>
           <label>Preferred drop off day<input id="bk_day" type="text" placeholder="Thursday morning"></label>
           <label class="full">What is it doing, or what do you want done<textarea id="bk_why"></textarea></label>
@@ -945,11 +946,54 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
 
   slipBtn.addEventListener("click",function(){ buildSlip(st); });
 
+  /* model lists, so the customer picks rather than types. Ordered the way an
+     owner would say it, with an escape hatch for anything not listed. */
+  var MODELS={
+    "Lexus":["CT 200h","ES","GS","GX","HS","IS","LC","LS","LX","NX","RC","RX","RZ","SC","TX","UX"],
+    "Acura":["CL","ILX","Integra","Legend","MDX","NSX","RDX","RL","RLX","RSX","TL","TLX","TSX","ZDX"],
+    "Toyota":["4Runner","Avalon","C-HR","Camry","Celica","Corolla","Corolla Cross","Crown","FJ Cruiser",
+      "GR86","Grand Highlander","Highlander","Land Cruiser","Matrix","Mirai","MR2","Prius","Prius C",
+      "Prius V","RAV4","Sequoia","Sienna","Solara","Supra","Tacoma","Tundra","Venza","Yaris"],
+    "Honda":["Accord","Civic","Clarity","CR-V","CR-Z","Crosstour","Element","Fit","HR-V","Insight",
+      "Odyssey","Passport","Pilot","Prelude","Prologue","Ridgeline","S2000"]
+  };
+  var makeSel=document.getElementById("bk_make"),
+      modelSel=document.getElementById("bk_model"),
+      otherWrap=document.getElementById("bk_model_other_wrap"),
+      otherIn=document.getElementById("bk_model_other");
+
+  function fillModels(){
+    if(!makeSel||!modelSel) return;
+    var list=MODELS[makeSel.value]||null;
+    modelSel.innerHTML="";
+    if(otherWrap) otherWrap.hidden=true;
+    if(!list){
+      modelSel.disabled=true;
+      modelSel.appendChild(new Option("Pick a make first",""));
+      return;
+    }
+    modelSel.disabled=false;
+    modelSel.appendChild(new Option("Choose a model",""));
+    list.forEach(function(m){ modelSel.appendChild(new Option(m,m)); });
+    modelSel.appendChild(new Option("Other, not listed","__other"));
+  }
+  function modelValue(){
+    if(!modelSel) return "";
+    if(modelSel.value==="__other") return otherIn ? otherIn.value.trim() : "";
+    return modelSel.value;
+  }
+  if(makeSel)   makeSel.addEventListener("change",fillModels);
+  if(modelSel)  modelSel.addEventListener("change",function(){
+    if(otherWrap) otherWrap.hidden = modelSel.value!=="__other";
+    if(modelSel.value==="__other" && otherIn) otherIn.focus();
+  });
+  fillModels();
+
   var fb=document.getElementById("bk_submit");
   if(fb) fb.addEventListener("click",function(){
     var g=function(id){var n=document.getElementById(id); return n?n.value:"";};
     if(!g("bk_make")){ statusEl.textContent="Choose a make. The shop takes Lexus, Acura, Toyota and Honda only."; return; }
-    buildSlip({year:g("bk_year"),make:g("bk_make"),model:g("bk_model"),mileage:g("bk_miles"),
+    buildSlip({year:g("bk_year"),make:g("bk_make"),model:modelValue(),mileage:g("bk_miles"),
       reason:g("bk_why"),preferred_day:g("bk_day"),name:g("bk_name"),phone:g("bk_phone")});
   });
 
