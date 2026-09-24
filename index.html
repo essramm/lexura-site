@@ -215,7 +215,12 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
 #bkClose:hover{opacity:1}
 #bkFloatBody{overflow-y:auto;-webkit-overflow-scrolling:touch}
 #bkFloat .bk-panel{margin:0;border:0;border-radius:0}
-#bkFloat .bk-log{max-height:none;min-height:230px}
+#bkFloat .bk-bar{display:none}
+#bkFloat .bk-log{max-height:none;min-height:120px;padding-top:20px}
+#bkFloat .bk-in textarea{min-height:64px}
+#bkFloatHead .bk-btn{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4);
+  color:#FFFFFF;padding:7px 12px;font-size:13.5px}
+#bkFloatHead .bk-btn:hover{background:rgba(255,255,255,.26);border-color:#FFFFFF}
 #bkFloat .bk-slip{margin:0 16px 16px}
 @media(max-width:560px){
   #bkFloat{right:8px;left:8px;bottom:8px;width:auto;max-height:calc(100vh - 16px)}
@@ -1026,6 +1031,8 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       panel=document.querySelector(".bk-panel");
 
   if(floatBody && panel){ floatBody.appendChild(panel); if(mount) floatBody.appendChild(mount); }
+  var head=document.getElementById("bkFloatHead");
+  if(head && resetBtn && closeBtn) head.insertBefore(resetBtn, closeBtn);
 
   function openFloat(){
     if(!floatBox) return;
