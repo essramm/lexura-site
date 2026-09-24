@@ -721,6 +721,12 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
     return "("+d.slice(0,3)+") "+d.slice(3,6)+" "+d.slice(6);
   }
   /* a number or an email, whichever the customer would rather be reached on */
+  /* the model is optional; when it is unknown we keep a marker so the step
+     machine moves on, and hide the marker everywhere the car is described */
+  function carStr(){
+    var m=(st.model==="Not given")?"":st.model;
+    return [st.year,st.make,m].filter(Boolean).join(" ");
+  }
   function parseContact(raw){
     var e=raw.match(/[^\s<>()\[\],;:]+@[^\s<>()\[\],;:]+\.[A-Za-z]{2,}/);
     if(e) return e[0];
@@ -742,10 +748,28 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
         st.year=v.year; st.make=v.make; st.model=v.model;
         var strip=raw.replace(/\b(19|20)\d{2}\b/,"").replace(new RegExp(v.make,"ig"),"");
         if(v.model) strip=strip.replace(new RegExp(v.model.replace(/[-\/\\^$*+?.()|[\]{}]/g,"\\$&"),"ig"),"");
-        strip=strip.replace(/[,\.]/g," ").trim();
-        if(!st.reason && strip.split(/\s+/).filter(Boolean).length>=3) st.reason=strip;
-        var car=[st.year,st.make,st.model].filter(Boolean).join(" ");
-        return "Got it, "+car+". Roughly what is it on for mileage?";
+        strip=strip.replace(/[,\.]/g," ").replace(/\s+/g," ").trim();
+        var meaty=strip.replace(/\b(i|we|my|our|a|an|the|this|that|it|its|is|am|are|have|has|got|own|drive|driving|car|vehicle|and|with|of|on|for|please|hi|hello)\b/gi," ")
+                       .replace(/\s+/g," ").trim();
+        if(!st.reason && meaty.split(/\s+/).filter(Boolean).length>=2) st.reason=strip;
+        if(!st.model){
+          return "Got it, a "+[st.year,st.make].filter(Boolean).join(" ")+". Which model is it? If you are not sure, just say so and we will carry on.";
+        }
+        return "Got it, "+carStr()+". Roughly what is it on for mileage?";
+      }},
+    { key:"model",
+      ask:"Which model is it? If you are not sure, just say so and we will carry on.",
+      retry:"Either the model, or tell me you are not sure and we will move on.",
+      take:function(t,raw){
+        if(/\b(not sure|unsure|no idea|do ?n[o']?t know|dont know|dunno|skip|not certain|no clue)\b/.test(t)){
+          st.model="Not given";
+          return "No problem, Alan will work it out from the car.\n\nRoughly what is it on for mileage?";
+        }
+        var m=raw.trim().replace(/[,\.]+$/,"");
+        if(!m || m.length>40) return null;
+        if(m===m.toLowerCase()) m=m.replace(/\b\w/g,function(c){return c.toUpperCase();});
+        st.model=m;
+        return "Got it, "+carStr()+". Roughly what is it on for mileage?";
       }},
     { key:"mileage",
       ask:"Roughly what is it on for mileage?",
@@ -787,7 +811,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       take:function(t,raw){
         var p=parseContact(raw); if(!p) return null;
         st.phone=p; done=true;
-        var car=[st.year,st.make,st.model].filter(Boolean).join(" ");
+        var car=carStr();
         var mi=(st.mileage && st.mileage!=="Not given") ? " on "+st.mileage : "";
         return "That is everything. "+car+mi+", in for "+
           (st.reason||"a look")+", dropping off "+(st.preferred_day||"whenever suits you")+".\n\n"+
@@ -846,7 +870,8 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
 
   function buildSlip(data){
     var code=ref();
-    var veh=[clean(data.year),clean(data.make),clean(data.model)].filter(Boolean).join(" ");
+    var mdl=clean(data.model); if(mdl==="Not given") mdl="";
+    var veh=[clean(data.year),clean(data.make),mdl].filter(Boolean).join(" ");
     var rows=[
       ["Vehicle",veh||"Not given"],
       ["Mileage",clean(data.mileage)||"Not given"],
