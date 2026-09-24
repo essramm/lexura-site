@@ -777,8 +777,8 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
   /* ---------- the script ---------- */
   var STEPS=[
     { key:"vehicle",
-      ask:"What is the make and model of the car?",
-      retry:"What is the make and model? We take Lexus, Acura, Toyota and Honda.",
+      ask:"What is the year, make and model of the car?",
+      retry:"What is the year, make and model? We take Lexus, Acura, Toyota and Honda.",
       take:function(t,raw){
         var v=parseVehicle(t,raw);
         if(v.stop) return {stop:v.stop};
