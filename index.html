@@ -440,7 +440,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
           <label>Model<select id="bk_model" disabled><option value="">Pick a make first</option></select></label>
           <label class="full" id="bk_model_other_wrap" hidden>Model, not listed<input id="bk_model_other" type="text" placeholder="Type the model"></label>
           <label>Approximate mileage<input id="bk_miles" type="text" inputmode="numeric" placeholder="118,000"></label>
-          <label>Preferred drop off day<input id="bk_day" type="text" placeholder="Thursday morning"></label>
+          <label>Preferred day and time<input id="bk_day" type="text" placeholder="Thursday morning"></label>
           <label class="full">What is it doing, or what do you want done<textarea id="bk_why"></textarea></label>
           <div class="full"><button class="bk-btn p" id="bk_submit" type="button">Write up my request</button></div>
         </div>
@@ -847,7 +847,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       take:function(t,raw){
         var m=parseMiles(t,raw); if(!m) return null;
         st.mileage=m;
-        if(st.reason) return "Thanks. Alan will call you with what it is and what it costs before he touches anything.\n\nWhich day suits you for dropping it off?";
+        if(st.reason) return "Thanks. Alan will call you with what it is and what it costs before he touches anything.\n\nWhat day and time works for you?";
         return "Thanks. What is it doing, or what service do you want done?";
       }},
     { key:"reason",
@@ -856,15 +856,45 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       take:function(t,raw){
         if(raw.trim().length<3) return null;
         st.reason=st.reason&&st.reason!==raw ? st.reason+". "+raw : raw;
-        return "Noted. Alan will call you with what it is and what it costs before he touches anything.\n\nWhich day suits you for dropping it off?";
+        return "Noted. Alan will call you with what it is and what it costs before he touches anything.\n\nWhat day and time works for you?";
       }},
     { key:"preferred_day",
-      ask:"Which day suits you for dropping it off?",
-      retry:"Any day works, mornings are best. Monday to Friday 9 to 6, Saturday 9 to 5.",
+      ask:"What day and time works for you?",
+      retry:"Monday to Friday 9 to 6, or Saturday 9 to 5. What suits you?",
       take:function(t,raw){
         if(!raw.trim()) return null;
+
+        /* the shop is shut on Sunday, so never confirm one */
+        var d=new Date().getDay();
+        var saysSunday = /\bsun(day|days)?\b/.test(t)
+          || (/\btoday\b/.test(t) && d===0)
+          || (/\btomorrow\b/.test(t) && (d+1)%7===0);
+        if(saysSunday){
+          return {hold:"We are closed on Sunday. Monday to Friday is 9 to 6 and Saturday is 9 to 5, so which of those suits you?"};
+        }
+
+        var isSat = /\bsat(urday|urdays)?\b/.test(t) || (/\btoday\b/.test(t) && d===6) || (/\btomorrow\b/.test(t) && (d+1)%7===6);
+        var closes = isSat ? 17 : 18;
+
+        /* only read a time when it is clearly one, so "the 14th" is left alone */
+        var tm = t.match(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/) || t.match(/\b(\d{1,2}):(\d{2})\b/);
+        if(tm){
+          var hr=parseInt(tm[1],10), ap=tm[3]||"";
+          if(/p/.test(ap) && hr<12) hr+=12;
+          if(/a/.test(ap) && hr===12) hr=0;
+          if(!ap && hr>=1 && hr<=6) hr+=12;           /* "3:30" means the afternoon */
+          if(hr<9){
+            return {hold:"We open at 9 in the morning. Anything from 9 onwards works, what would you like?"};
+          }
+          if(hr>=closes){
+            return {hold:"We close at "+(isSat?"5 on Saturday":"6")+". Something earlier in the day?"};
+          }
+        }
+
         st.preferred_day=raw.trim();
-        return "That works. Mornings are best, the bays fill up.\n\nWhat name should I put on it?";
+        var tail="\n\nThat is a preference rather than a booked slot, Alan takes cars as they arrive.\n\nWhat name should I put on it?";
+        if(isSat) return "Saturday works, we close at 5 that day so earlier is better."+tail;
+        return "That works. Mornings are best, the bays fill up."+tail;
       }},
     { key:"name",
       ask:"What name should I put on it?",
@@ -947,7 +977,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       ["Vehicle",veh||"Not given"],
       ["Mileage",clean(data.mileage)||"Not given"],
       ["Reason for visit",clean(data.reason)||"Not given"],
-      ["Drop off day",clean(data.preferred_day)||"Any weekday morning"],
+      ["Drop off",clean(data.preferred_day)||"Any weekday morning"],
       ["Name",clean(data.name)||"Not given"],
       ["Phone or email",clean(data.phone)||"Not given"]
     ];
