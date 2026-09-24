@@ -196,6 +196,32 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
   border-left:2px solid var(--rule);padding-left:14px}
 .bk-disc a{color:var(--accent-2);text-decoration:none;border-bottom:1px solid var(--accent)}
 .bk-disc a:hover{color:var(--fg)}
+#bkLauncher{position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:200;
+  display:flex;align-items:center;gap:10px;padding:14px 20px;border:0;border-radius:999px;cursor:pointer;
+  background:var(--accent);color:#FFFFFF;font-family:var(--body);font-size:15px;font-weight:500;
+  box-shadow:0 12px 34px -12px rgba(0,0,0,.5);transition:background .16s ease,transform .16s ease}
+#bkLauncher:hover{background:var(--accent-2);transform:translateY(-1px)}
+#bkLauncher svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;flex:none}
+#bkLauncher.hide{display:none}
+#bkFloat{position:fixed;right:22px;bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:210;
+  width:min(430px,calc(100vw - 44px));max-height:min(700px,calc(100vh - 100px));
+  display:none;flex-direction:column;background:var(--bg-2);border:1px solid var(--rule);
+  border-radius:12px;overflow:hidden;box-shadow:0 26px 70px -22px rgba(0,0,0,.55)}
+#bkFloat.open{display:flex}
+#bkFloatHead{display:flex;align-items:center;gap:11px;padding:15px 18px;background:var(--accent);color:#FFFFFF;flex:none}
+#bkFloatHead b{flex:1;font-family:var(--display);font-weight:700;font-stretch:112%;text-transform:uppercase;
+  letter-spacing:.05em;font-size:15px}
+#bkClose{background:none;border:0;color:#FFFFFF;font-size:26px;line-height:1;cursor:pointer;padding:0 2px;opacity:.85}
+#bkClose:hover{opacity:1}
+#bkFloatBody{overflow-y:auto;-webkit-overflow-scrolling:touch}
+#bkFloat .bk-panel{margin:0;border:0;border-radius:0}
+#bkFloat .bk-log{max-height:none;min-height:230px}
+#bkFloat .bk-slip{margin:0 16px 16px}
+@media(max-width:560px){
+  #bkFloat{right:8px;left:8px;bottom:8px;width:auto;max-height:calc(100vh - 16px)}
+  #bkLauncher{right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:14px 16px}
+  #bkLauncher span{display:none}
+}
 .bk-panel{margin-top:46px;border:1px solid var(--rule);background:var(--bg-2)}
 .bk-bar{display:flex;align-items:center;gap:14px;padding:16px 22px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
 .bk-bar h3{font-size:18px;font-stretch:112%}
@@ -370,6 +396,8 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
         <p>If you cannot reach Alan by calling, send a message through the service desk.</p>
         <p class="bk-disc" id="bkDisc">The service desk emails your request to Alan automatically. You can also text it or copy it yourself, or <a href="#bkFallback" class="bk-openform">fill out the form</a> instead of chatting.</p>
       </div>
+
+      <p style="margin-top:26px"><button class="bk-btn p" id="bkOpenDesk" type="button" style="font-size:16px;padding:13px 22px">Open the service desk</button></p>
 
       <div class="bk-panel">
         <div class="bk-bar">
@@ -911,7 +939,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       reason:g("bk_why"),preferred_day:g("bk_day"),name:g("bk_name"),phone:g("bk_phone")});
   });
 
-  var GREETING="Hi. I take drop off requests for Alan, so you do not have to catch him on the phone.\n\nWhat are you driving, and what is it doing?";
+  var GREETING="Hi, this is Alan the virtual agent. What is the reason for your visit?";
   var CHIPS=["2014 Lexus RX350, brakes are grinding","2011 Honda Accord, check engine light",
              "2016 Toyota Camry, due for the 90k service","Second opinion on a dealer quote"];
 
@@ -930,6 +958,45 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
     addMsg("bot",GREETING); renderChips();
   }
 
+  /* the desk moves into the floating window; the page section keeps the
+     heading, the notice, the form, and buttons that open it */
+  var floatBox=document.getElementById("bkFloat"),
+      floatBody=document.getElementById("bkFloatBody"),
+      launcher=document.getElementById("bkLauncher"),
+      closeBtn=document.getElementById("bkClose"),
+      openDesk=document.getElementById("bkOpenDesk"),
+      panel=document.querySelector(".bk-panel");
+
+  if(floatBody && panel){ floatBody.appendChild(panel); if(mount) floatBody.appendChild(mount); }
+
+  function openFloat(){
+    if(!floatBox) return;
+    floatBox.classList.add("open");
+    if(launcher) launcher.classList.add("hide");
+    setTimeout(function(){ if(say && !say.disabled) say.focus(); },120);
+  }
+  function closeFloat(){
+    if(!floatBox) return;
+    floatBox.classList.remove("open");
+    if(launcher) launcher.classList.remove("hide");
+  }
+  if(launcher) launcher.addEventListener("click",openFloat);
+  if(openDesk) openDesk.addEventListener("click",openFloat);
+  if(closeBtn) closeBtn.addEventListener("click",closeFloat);
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape" && floatBox && floatBox.classList.contains("open")) closeFloat();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('a[href="#book"]'),function(a){
+    a.addEventListener("click",function(){ setTimeout(openFloat,420); });
+  });
+
+  /* the form link in the notice opens the details, which an anchor alone will not */
+  var opener=document.querySelector(".bk-openform");
+  if(opener && fallback) opener.addEventListener("click",function(e){
+    e.preventDefault(); fallback.open=true;
+    fallback.scrollIntoView({behavior:"smooth",block:"center"});
+  });
+
   say.addEventListener("input",function(){ say.style.height="auto"; say.style.height=Math.min(say.scrollHeight,152)+"px"; });
   say.addEventListener("keydown",function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } });
   sendBtn.addEventListener("click",send);
@@ -939,5 +1006,19 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
   statusEl.textContent="Your request goes to Alan. He calls you back to confirm.";
 })();
 </script>
+
+<button id="bkLauncher" type="button" aria-label="Open the service desk">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-5.6A8 8 0 0 1 5 5.6 8 8 0 0 1 13 4a8 8 0 0 1 8 8Z" stroke-linejoin="round"/></svg>
+  <span>Book a drop off</span>
+</button>
+
+<div id="bkFloat" role="dialog" aria-label="Lexura service desk">
+  <div id="bkFloatHead">
+    <span class="bk-pip" aria-hidden="true" style="background:#fff"></span>
+    <b>Service desk</b>
+    <button id="bkClose" type="button" aria-label="Close the service desk">&times;</button>
+  </div>
+  <div id="bkFloatBody"></div>
+</div>
 
 </body></html>
