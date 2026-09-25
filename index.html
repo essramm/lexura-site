@@ -776,6 +776,21 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
 
   /* ---------- the script ---------- */
   var STEPS=[
+    { key:"gate",
+      ask:"Would you rather drop by, or shall I take your details?",
+      retry:"Either is fine. Drop by during opening hours, or I can take your details now.",
+      take:function(t,raw){
+        if(/\b(drop by|drop in|come by|come in|stop by|walk in|walkin|just come|swing by|bring it in|i will come|ill come)\b/.test(t)){
+          st.gate="walkin";
+          return "Perfect. Come by whenever suits, no appointment needed.\n\nWe are at 7136 Village Parkway in Dublin, open Monday to Friday 9 to 6 and Saturday 9 to 5. Mornings are quietest.\n\nIf you would rather I took your details anyway, just say so.";
+        }
+        st.gate="details";
+        /* a symptom typed here should not be lost */
+        var meaty=raw.replace(/\b(please|can you|could you|take|my|details|i|we|a|an|the|this|that|it|its|is|am|are|have|has|got|own|drive|driving|car|vehicle|and|with|of|on|for|hi|hello|no|cannot|cant|can not)\b/gi," ")
+                     .replace(/\s+/g," ").trim();
+        if(!st.reason && meaty.split(/\s+/).filter(Boolean).length>=2) st.reason=raw.trim();
+        return "No problem, I will take a few details.\n\nWhat is the year, make and model of the car?";
+      }},
     { key:"vehicle",
       ask:"What is the year, make and model of the car?",
       retry:"What is the year, make and model? We take Lexus, Acura, Toyota and Honda.",
@@ -870,7 +885,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
           || (/\btoday\b/.test(t) && d===0)
           || (/\btomorrow\b/.test(t) && (d+1)%7===0);
         if(saysSunday){
-          return {hold:"We are closed on Sunday. Monday to Friday is 9 to 6 and Saturday is 9 to 5, so which of those suits you?"};
+          return {hold:"Sorry, we are closed on Sundays. We are open Monday to Friday 9 to 6, and Saturday 9 to 5. Would any of those work for you?"};
         }
 
         var isSat = /\bsat(urday|urdays)?\b/.test(t) || (/\btoday\b/.test(t) && d===6) || (/\btomorrow\b/.test(t) && (d+1)%7===6);
@@ -884,10 +899,10 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
           if(/a/.test(ap) && hr===12) hr=0;
           if(!ap && hr>=1 && hr<=6) hr+=12;           /* "3:30" means the afternoon */
           if(hr<9){
-            return {hold:"We open at 9 in the morning. Anything from 9 onwards works, what would you like?"};
+            return {hold:"Sorry, we do not open until 9 in the morning. Would anything from 9 onwards work for you?"};
           }
           if(hr>=closes){
-            return {hold:"We close at "+(isSat?"5 on Saturday":"6")+". Something earlier in the day?"};
+            return {hold:"Sorry, we close at "+(isSat?"5 on Saturdays":"6")+". Would something earlier in the day work for you?"};
           }
         }
 
@@ -938,6 +953,14 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
     if(has(t,UNSAFE) && !warned.unsafe){
       warned.unsafe=true;
       pre+="That one I would not drive. Get it towed in rather than risking the trip over, and call "+TELD+" if you need a hand arranging it. I will still take the request down.\n\n";
+    }
+
+    if(st.gate==="walkin"){
+      if(/\b(details|book|booking|request|write|take mine|take my|yes please|yes|schedule|sign me)\b/.test(t)){
+        st.gate="details"; step=1;
+        return pre+"Of course.\n\nWhat is the year, make and model of the car?";
+      }
+      return pre+"Come by any time Monday to Friday 9 to 6, or Saturday 9 to 5. We are at 7136 Village Parkway in Dublin.\n\nIf you would like me to take your details instead, just say so.";
     }
 
     if(step>=STEPS.length) return pre+"I have everything. Press Write up my request below the chat.";
@@ -1134,9 +1157,9 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       reason:g("bk_why"),preferred_day:g("bk_day"),name:g("bk_name"),phone:g("bk_phone")});
   });
 
-  var GREETING="Hi, this is Alan's service agent. What is the reason for your visit?";
-  var CHIPS=["Brakes are grinding","Check engine light is on",
-             "Due for a scheduled service","Second opinion on a dealer quote"];
+  var GREETING="Hi, this is Alan's service agent. You are welcome to just drop the car by during opening hours, no appointment needed.\n\nIf that does not suit, I can take your details and pass them to Alan. Which would you prefer?";
+  var CHIPS=["I will drop by","Please take my details",
+             "Brakes are grinding","Check engine light is on"];
 
   function renderChips(){
     chipsEl.innerHTML="";
