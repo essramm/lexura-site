@@ -660,7 +660,9 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
   var OTHER=["bmw","mercedes","benz","audi","volkswagen","vw","ford","chevy","chevrolet","gmc",
     "nissan","infiniti","subaru","mazda","kia","hyundai","genesis","jeep","dodge","ram","chrysler",
     "tesla","volvo","porsche","mini","jaguar","land rover","range rover","buick","cadillac",
-    "lincoln","mitsubishi","fiat","alfa","saab","suzuki","scion"];
+    "lincoln","mitsubishi","fiat","alfa","saab","suzuki","scion","rivian","lucid","polestar",
+    "maserati","bentley","ferrari","lamborghini","lotus","peugeot","renault","skoda","seat",
+    "isuzu","daihatsu","hummer","pontiac","saturn","oldsmobile","mercury","datsun"];
   var UNSAFE=["pedal goes to the floor","pedal to the floor","no brakes","brakes failed","brake failure",
     "lost brakes","smoke","smoking","on fire","overheating","overheat","steering locked","lost steering",
     "cant steer","can't steer","wheel wobble","wobbling","loud knock","knocking sound","rod knock"];
@@ -694,14 +696,42 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
   }
 
   /* ---------- parsers ---------- */
+  /* people misspell makes constantly. Check the exact word first, then allow a
+     character or two of slack, so Infinity reaches Infiniti and Toyta reaches Toyota. */
+  function fuzzyMake(raw, list){
+    var words=String(raw).toLowerCase().match(/[a-z]{4,}/g)||[];
+    for(var i=0;i<words.length;i++){
+      for(var j=0;j<list.length;j++){
+        var target=list[j].replace(/[^a-z]/g,"");
+        if(target.length<4) continue;
+        var tol=target.length<=5?1:2;
+        if(lev(words[i],target)<=tol) return list[j];
+      }
+    }
+    return null;
+  }
   function parseVehicle(t, raw){
-    var bad=has(t,OTHER);
-    var mine=has(t,OURS);
-    if(bad && !mine) return {stop:"We only work on Lexus, Acura, Toyota and Honda here, so Alan would not be able to take a "+makeName(bad)+". Worth looking for an independent specialist for that make. Sorry to send you elsewhere."};
+    var mine=has(t,OURS) || fuzzyMake(raw,OURS);
+    var bad=has(t,OTHER) || (mine?null:fuzzyMake(raw,OTHER));
+    if(bad && !mine) return {stop:"Sorry, we only work on Lexus, Acura, Toyota and Honda here, so Alan would not be able to take "+article(makeName(bad))+" "+makeName(bad)+". It is worth looking for an independent specialist for that make."};
     if(!mine) return {need:true};
     var year=(raw.match(/\b(19|20)\d{2}\b/)||[])[0]||"";
     var rest=raw.replace(/\b(19|20)\d{2}\b/,"").replace(new RegExp(mine,"ig"),"");
-    var model=(rest.match(/\b[A-Za-z]{1,3}[-\s]?\d{2,3}\b|\b(camry|corolla|accord|civic|pilot|odyssey|sienna|highlander|tacoma|tundra|rav4|crv|cr-v|hrv|hr-v|prius|mdx|rdx|tlx|tsx|integra|legend)\b/i)||[])[0]||"";
+    var makeName2=mine.charAt(0).toUpperCase()+mine.slice(1);
+    var model="";
+    /* try the two word names first, then single words, against that make's list */
+    var toks=(rest.match(/[A-Za-z0-9\-]+/g)||[]);
+    var k, cand, r;
+    for(k=0;k<toks.length-1 && !model;k++){
+      cand=toks[k]+" "+toks[k+1];
+      r=matchModel(makeName2,cand);
+      if(r.matched) model=r.value;
+    }
+    for(k=0;k<toks.length && !model;k++){
+      if(toks[k].length<2) continue;
+      r=matchModel(makeName2,toks[k]);
+      if(r.matched) model=r.value;
+    }
     model=model.trim();
     if(model && model===model.toLowerCase()) model=model.replace(/\b\w/g,function(c){return c.toUpperCase();});
     return {year:year, make:mine.charAt(0).toUpperCase()+mine.slice(1), model:model};
@@ -744,21 +774,36 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
     }
     return prev[n];
   }
+  function article(w){
+    var c=String(w).charAt(0).toUpperCase();
+    if("AEIOU".indexOf(c)>-1) return "an";
+    if(c==="8") return "an";           /* an 88 Camry */
+    if(c>="0"&&c<="9") return "a";     /* a 2011 Honda */
+    return "a";
+  }
   function joinOr(a){
     if(a.length===1) return a[0];
     return a.slice(0,-1).join(", ")+" or "+a[a.length-1];
   }
   function matchModel(make, input){
     var list=(typeof MODELS!=="undefined" && MODELS[make]) ? MODELS[make] : null;
-    var n=norm(input);
-    if(!list || !n) return {ok:true, value:input};
-    var i, ln;
+    var n=norm(input), i, ln;
+    if(!list || !n) return {ok:true, matched:false, value:input};
+
+    /* exact first, across the whole list, so Corolla Cross is not eaten by Corolla */
+    for(i=0;i<list.length;i++){ if(norm(list[i])===n) return {ok:true, matched:true, value:list[i]}; }
+
+    /* then the longest entry this starts with: RX350 from RX, CRV from CR-V */
+    var best=null, bestLen=0;
     for(i=0;i<list.length;i++){
       ln=norm(list[i]);
-      if(ln===n) return {ok:true, value:list[i]};
-      /* RX350 against RX, CRV against CR-V, TLX Tech against TLX */
-      if(n.indexOf(ln)===0 && n.length<=ln.length+5) return {ok:true, value:input};
+      if(ln.length>=2 && n.indexOf(ln)===0 && n.length<=ln.length+5 && ln.length>bestLen){ best=list[i]; bestLen=ln.length; }
     }
+    if(best){
+      var rest=n.slice(bestLen);
+      return {ok:true, matched:true, value: rest ? best+rest.toUpperCase() : best};
+    }
+
     var scored=[];
     for(i=0;i<list.length;i++){
       ln=norm(list[i]);
@@ -766,7 +811,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
       if(d<=tol) scored.push([d,list[i]]);
     }
     scored.sort(function(a,b){ return a[0]-b[0]; });
-    return {ok:false, suggest:scored.slice(0,3).map(function(x){ return x[1]; })};
+    return {ok:false, matched:false, suggest:scored.slice(0,3).map(function(x){ return x[1]; })};
   }
   function parseContact(raw){
     var e=raw.match(/[^\s<>()\[\],;:]+@[^\s<>()\[\],;:]+\.[A-Za-z]{2,}/);
@@ -815,8 +860,7 @@ footer .set{margin-left:auto;font-family:var(--mono);font-size:12px;letter-spaci
         if(!st.reason && meaty.split(/\s+/).filter(Boolean).length>=2) st.reason=strip;
         if(!st.model){
           var lead=[st.year,st.make].filter(Boolean).join(" ");
-          var art=/^[0-9AEIOU]/i.test(lead)?"an":"a";
-          return "Got it, "+art+" "+lead+". Which model is it? If you are not sure, just say so and we will carry on.";
+          return "Got it, "+article(lead)+" "+lead+". Which model is it? If you are not sure, just say so and we will carry on.";
         }
         return "Got it, "+carStr()+". Roughly what is it on for mileage?";
       }},
